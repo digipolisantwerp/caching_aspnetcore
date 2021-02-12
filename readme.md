@@ -38,10 +38,16 @@ In Visual Studio you can also use the NuGet Package Manager to do this.
 ## Usage
 
 This library serves as the Digipolis Caching library. It contains the service collection extension method to register the
-Digipolis Swagger options, to be called in the **ConfigureServices** method of the **Startup** class.
+Digipolis caching options, to be called in the **ConfigureServices** method of the **Startup** class.
 
 ```csharp  
 services.AddCache(configuration, environment);
+```
+
+On .NET Core 3.x, also add the following code if you're using distributed caching:
+
+```csharp  
+services.AddDistributedMemoryCache();
 ```
 
 Optionally you can also specify the configuration section as the third argument. 
