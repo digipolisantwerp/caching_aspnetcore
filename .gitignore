@@ -5,8 +5,13 @@ node_modules/
 bower_components/
 
 .vs/
+.vscode/
+.cr/
+.idea/
 
-_SpecRunner.html
+wwwroot/
+
+project.lock.json
 
 # site css
 site.css
@@ -198,3 +203,6 @@ FakesAssemblies/
 GeneratedArtifacts/
 _Pvt_Extensions/
 ModelManifest.xml
+
+_SpecRunner.html
+.grunt/
