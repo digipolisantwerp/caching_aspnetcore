@@ -44,12 +44,6 @@ Digipolis caching options, to be called in the **ConfigureServices** method of t
 services.AddCache(configuration, environment);
 ```
 
-On .NET Core 3.x, also add the following code if you're using distributed caching:
-
-```csharp  
-services.AddDistributedMemoryCache();
-```
-
 Optionally you can also specify the configuration section as the third argument. 
 That section should contain the caching settings specified in the [App settings](#app-settings) section.
 When no configuration section is supplied the default expects a nested structure like so:
