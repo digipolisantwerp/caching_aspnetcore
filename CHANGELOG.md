@@ -1,5 +1,11 @@
 # Caching
 
+## 4.0.1
+- fixed missing distributed cache handler registration when running in development mode with tier 2 cache enabled
+
+## 4.0.0
+- Update to .NET standard 2.0
+
 ## 3.0.1
 - System.Text.Json package upgrade to 5.0.1 (support referenceloophandling)
 
