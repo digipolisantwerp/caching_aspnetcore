@@ -78,6 +78,11 @@ namespace Digipolis.Caching.Startup
             {
                 services.AddSingleton<DistributedCacheHandler>();
             }
+            else if (environment.IsDevelopment() && cacheSettings.Tier2Enabled)
+            {
+                services.AddDistributedMemoryCache();
+                services.AddSingleton<DistributedCacheHandler>();
+            }
 
             services.AddSingleton<LocalCacheHandler>();
         }
