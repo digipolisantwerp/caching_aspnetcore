@@ -113,6 +113,7 @@ namespace Digipolis.Caching.Services
                         {
                             itemFoundInCacheTierNumber = i;
                             result = cacheResult;
+                            break;
                         }
                     }
                 }
