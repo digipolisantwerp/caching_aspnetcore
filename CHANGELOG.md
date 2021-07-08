@@ -1,5 +1,8 @@
 # Caching
 
+## 4.0.2
+- fix in CacheService: when data is found in one cache, break out the loop and don't look further
+
 ## 4.0.1
 - fixed missing distributed cache handler registration when running in development mode with tier 2 cache enabled
 
