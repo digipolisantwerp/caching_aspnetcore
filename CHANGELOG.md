@@ -1,5 +1,8 @@
 # Caching
 
+## 5.0.0
+- Update for .net 5 applications
+
 ## 4.0.2
 - fix in CacheService: when data is found in one cache, break out the loop and don't look further
 
