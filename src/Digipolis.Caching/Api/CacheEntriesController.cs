@@ -1,10 +1,10 @@
-﻿using Digipolis.Caching.Models;
+﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
+using Digipolis.Caching.Models;
 using Digipolis.Caching.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Digipolis.Caching.Api
 {
@@ -31,9 +31,7 @@ namespace Digipolis.Caching.Api
         public virtual async Task<IActionResult> RemoveCacheEntries([FromBody] CacheEntryWrapper cacheEntryWrapper)
         {
             if (cacheEntryWrapper?.Keys?.Any() ?? false)
-            {
                 await _service.RemoveFromCacheAsync(cacheEntryWrapper.Keys.ToArray());
-            }
             return NoContent();
         }
     }
