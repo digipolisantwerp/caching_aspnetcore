@@ -21,7 +21,7 @@ To request a Redis cache, please sent an [email](mailto:servicedesk@digipolis.be
 
 ## Target framework
 
-This package targets **.NET Standard 2.0**.
+This package targets **.NET Core 3.1**.
 
 ## Installation
 
@@ -83,5 +83,4 @@ Pull requests are always welcome, however keep the following things in mind:
 
 ## Support
 
-Rob Liekens (<Rob.Liekens@digipolis.be>)
 Erik Seynaeve (<Erik.Seynaeve@digipolis.be>)

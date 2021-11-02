@@ -1,9 +1,9 @@
-﻿using Digipolis.Caching.Constants;
-using Digipolis.Caching.Constants.Config;
+﻿using Digipolis.Caching.Constants.Config;
 using Digipolis.Caching.Options._Base;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Digipolis.Caching.Options
 {
@@ -19,7 +19,7 @@ namespace Digipolis.Caching.Options
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "HAA0302:Display class allocation to capture closure", Justification = "<Pending>")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "HAA0301:Closure Allocation Source", Justification = "<Pending>")]
-        public static void RegisterConfiguration(IServiceCollection services, IConfigurationSection section, IHostingEnvironment env)
+        public static void RegisterConfiguration(IServiceCollection services, IConfigurationSection section, IHostEnvironment env)
         {
             services.Configure<CacheSettings>(settings =>
             {
@@ -33,7 +33,7 @@ namespace Digipolis.Caching.Options
             section.Bind(this);
         }
 
-        private void OverrideFromEnvironmentVariables(IHostingEnvironment env)
+        private void OverrideFromEnvironmentVariables(IHostEnvironment env)
         {
             Configuration = GetValue(Configuration, CacheSettingsConfigKey.Configuration, env);
             CacheEnabled = GetValue(CacheEnabled, CacheSettingsConfigKey.CacheEnabled, env);

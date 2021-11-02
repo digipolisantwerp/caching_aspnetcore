@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Polly;
 using Polly.Caching.Distributed;
@@ -18,7 +18,7 @@ namespace Digipolis.Caching.Startup
         public static void AddCache(
             this IServiceCollection services,
             IConfiguration configuration,
-            IHostingEnvironment environment,
+            IHostEnvironment environment,
             IConfigurationSection customConfigurationSection = null)
         {
             IConfigurationSection configurationSection;
@@ -46,7 +46,7 @@ namespace Digipolis.Caching.Startup
         private static void AddMultiTierCaches(
             this IServiceCollection services,
             CacheSettings cacheSettings,
-            IHostingEnvironment environment)
+            IHostEnvironment environment)
         {
             services.AddMemoryCache();
 
@@ -62,7 +62,7 @@ namespace Digipolis.Caching.Startup
         private static void RegisterDependencies(
             this IServiceCollection services,
             CacheSettings cacheSettings,
-            IHostingEnvironment environment)
+            IHostEnvironment environment)
         {
             AddHandlers(services, cacheSettings, environment);
             AddServices(services);
@@ -72,7 +72,7 @@ namespace Digipolis.Caching.Startup
         private static void AddHandlers(
             this IServiceCollection services,
             CacheSettings cacheSettings,
-            IHostingEnvironment environment)
+            IHostEnvironment environment)
         {
             if (!environment.IsDevelopment() && cacheSettings.Tier2Enabled)
             {
