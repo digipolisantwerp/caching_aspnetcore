@@ -90,6 +90,7 @@ namespace Digipolis.Caching.Startup
         private static void AddServices(this IServiceCollection services)
         {
             services.AddSingleton<ICacheService, CacheService>();
+            services.AddScoped<CacheControlOptions>();
         }
 
         private static void AddPolicies(this IServiceCollection services)

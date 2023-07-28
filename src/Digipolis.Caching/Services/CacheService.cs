@@ -19,16 +19,18 @@ namespace Digipolis.Caching.Services
         private readonly CacheSettings _settings;
         private readonly IReadOnlyCollection<CacheHandlerWithOptions> _cacheHandlers;
         private readonly ILogger<CacheService> _logger;
+        private readonly CacheControlOptions _cacheControlOptions;
 
         public CacheService(
             IServiceProvider serviceProvider,
             IOptions<CacheSettings> options,
-            ILogger<CacheService> logger)
+            ILogger<CacheService> logger,
+            CacheControlOptions cacheControlOptions)
         {
             _settings = options?.Value ?? throw new ArgumentNullException($"{GetType().Name}.Ctr - Argument {nameof(options)} cannot be null.");
             if (serviceProvider == null) throw new ArgumentNullException($"{GetType().Name}.Ctr - Argument {nameof(serviceProvider)} cannot be null.");
 
-            if (!IsCacheEnabled())
+            if (!IsCacheEnabled() || cacheControlOptions.DisableCacheFromHeader)
             {
                 _cacheHandlers = new List<CacheHandlerWithOptions>(0);
                 return;
@@ -48,6 +50,7 @@ namespace Digipolis.Caching.Services
 
             _cacheHandlers = cacheHandlers;
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _cacheControlOptions = cacheControlOptions;
         }
 
         public async Task<T> GetFromCacheOrFuncAsync<T>(
@@ -92,7 +95,7 @@ namespace Digipolis.Caching.Services
         public async Task<(bool succeeded, T value)> GetFromCacheAsync<T>(string key, int? minutesToCacheLocally = null)
         {
             CacheObject<T> result = default;
-            if (!IsCacheEnabled() || _cacheHandlers == null || _cacheHandlers.Count < 1) return (succeeded: false, value: result.Value);
+            if (!IsCacheEnabled() || _cacheControlOptions.DisableCacheFromHeader || _cacheHandlers == null || _cacheHandlers.Count < 1) return (succeeded: false, value: result.Value);
 
             var itemFoundInCacheTierNumber = -1;
 
@@ -106,20 +109,18 @@ namespace Digipolis.Caching.Services
                 // Cache retrieval may never crash the application
                 try
                 {
-                    using (var cancellationTokenSource = new CancellationTokenSource(cacheHandlerWrapper.MilliSecondsBeforeTimeout))
-                    {
-                        var (succeeded, cacheResult) = await cacheHandlerWrapper.CacheHandler.GetFromCacheAsync<T>(key, cancellationTokenSource.Token);
-                        if (succeeded)
-                        {
-                            itemFoundInCacheTierNumber = i;
-                            result = cacheResult;
-                            break;
-                        }
-                    }
+	                using var cancellationTokenSource = new CancellationTokenSource(cacheHandlerWrapper.MilliSecondsBeforeTimeout);
+	                var (succeeded, cacheResult) = await cacheHandlerWrapper.CacheHandler.GetFromCacheAsync<T>(key, cancellationTokenSource.Token);
+	                if (succeeded)
+	                {
+		                itemFoundInCacheTierNumber = i;
+		                result = cacheResult;
+		                break;
+	                }
                 }
                 catch (OperationCanceledException)
                 {
-                    // Timout occured and task wask cancelled
+                    // Timeout occurred and task was cancelled
                     // Log error for statistics and early problem detection
                     _logger.LogError($"{GetType().Name}.GetFromCacheAsync - operation cancelled while retrieving cache entry '{key}'");
                 }
@@ -135,7 +136,7 @@ namespace Digipolis.Caching.Services
                 return (succeeded: false, value: default(T));
 
             // If item found in longer living cache, add it to shorter living cache
-            if (itemFoundInCacheTierNumber > 0 && result.CacheUntil > DateTime.UtcNow)
+            if (itemFoundInCacheTierNumber > 0 && result?.CacheUntil > DateTime.UtcNow)
             {
                 var cacheEntryLifeTimeRemaining = Convert.ToInt32(Math.Floor((result.CacheUntil - DateTime.UtcNow).TotalMinutes));
                 if (cacheEntryLifeTimeRemaining > 0)
@@ -144,13 +145,13 @@ namespace Digipolis.Caching.Services
                     {
                         var cacheHandlerWrapper = _cacheHandlers.ElementAt(i);
                         //check if cache object lifetime is smaller than minutes to cache locally, if so => only cache object lifetime
-                        var minutestoCache = minutesToCacheLocally < cacheEntryLifeTimeRemaining ? minutesToCacheLocally : cacheEntryLifeTimeRemaining;
-                        await SaveToSpecificCacheAsync<T>(key, result.Value, cacheHandlerWrapper, minutestoCache);
+                        var minutesToCache = minutesToCacheLocally < cacheEntryLifeTimeRemaining ? minutesToCacheLocally : cacheEntryLifeTimeRemaining;
+                        await SaveToSpecificCacheAsync(key, result.Value, cacheHandlerWrapper, minutesToCache);
                     }
                 }
             }
 
-            return (succeeded: true, value: result.Value);
+            return (succeeded: true, value: result!.Value);
         }
 
         /// <summary>
@@ -172,16 +173,16 @@ namespace Digipolis.Caching.Services
                 {
                     if (cacheHandlerWrapper.CacheHandler is LocalCacheHandler)
                     {
-                        await SaveToSpecificCacheAsync<T>(key, value, cacheHandlerWrapper, minutesToCacheLocally);
+                        await SaveToSpecificCacheAsync(key, value, cacheHandlerWrapper, minutesToCacheLocally);
                     }
                     else if (cacheHandlerWrapper.CacheHandler is DistributedCacheHandler)
                     {
-                        await SaveToSpecificCacheAsync<T>(key, value, cacheHandlerWrapper, minutesToCacheDistributed);
+                        await SaveToSpecificCacheAsync(key, value, cacheHandlerWrapper, minutesToCacheDistributed);
                     }
                     else
                     {
                         //unknown cache handler => using default cache duration
-                        await SaveToSpecificCacheAsync<T>(key, value, cacheHandlerWrapper);
+                        await SaveToSpecificCacheAsync(key, value, cacheHandlerWrapper);
                     }
                 }
                 catch (Exception)
@@ -205,11 +206,11 @@ namespace Digipolis.Caching.Services
             var reversed = _cacheHandlers.Reverse();
             foreach (var cacheHandlerWrapper in reversed)
             {
-                await cacheHandlerWrapper.CacheHandler?.RemoveFromCacheAsync(keys);
+                await cacheHandlerWrapper.CacheHandler?.RemoveFromCacheAsync(keys)!;
             }
         }
 
-        private async Task SaveToSpecificCacheAsync<T>(string key, T value, CacheHandlerWithOptions cacheHandlerWrapper, int? minutesToCache = null)
+        private static async Task SaveToSpecificCacheAsync<T>(string key, T value, CacheHandlerWithOptions cacheHandlerWrapper, int? minutesToCache = null)
         {
             if (!minutesToCache.HasValue)
             {
@@ -230,21 +231,19 @@ namespace Digipolis.Caching.Services
                     Value = value
                 };
 
-                using (var cancellationTokenSource = new CancellationTokenSource(cacheHandlerWrapper.MilliSecondsBeforeTimeout))
-                {
-                    // Write to cache even if key already exist, 
-                    // OK to overwrite existing data because data is probably retrieved recently
-                    await cacheHandlerWrapper.CacheHandler?.SaveToCacheAsync<T>(key, cacheObject, minutesToCache.Value, cancellationTokenSource.Token);
-                }
+                using var cancellationTokenSource = new CancellationTokenSource(cacheHandlerWrapper.MilliSecondsBeforeTimeout);
+                // Write to cache even if key already exist, 
+                // OK to overwrite existing data because data is probably retrieved recently
+                await cacheHandlerWrapper.CacheHandler?.SaveToCacheAsync<T>(key, cacheObject, minutesToCache.Value, cancellationTokenSource.Token)!;
             }
             catch (OperationCanceledException)
             {
-                // Timout occured and task wask cancelled
+                // Timeout occurred and task ask cancelled
                 // Log error for statistics and early problem detection
             }
             catch (Exception)
             {
-                // Log error but continue tyring to cache
+                // Log error but continue trying to cache
 
             }
         }
