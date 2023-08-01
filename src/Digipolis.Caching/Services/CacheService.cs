@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Digipolis.Caching.Services
 {
@@ -19,18 +21,18 @@ namespace Digipolis.Caching.Services
         private readonly CacheSettings _settings;
         private readonly IReadOnlyCollection<CacheHandlerWithOptions> _cacheHandlers;
         private readonly ILogger<CacheService> _logger;
-        private readonly CacheControlOptions _cacheControlOptions;
+        private readonly IHttpContextAccessor _httpContextAccessor;
+        private CacheControlOptions _cacheControlOptions;
 
         public CacheService(
             IServiceProvider serviceProvider,
             IOptions<CacheSettings> options,
-            ILogger<CacheService> logger,
-            CacheControlOptions cacheControlOptions)
+            ILogger<CacheService> logger, IHttpContextAccessor httpContextAccessor)
         {
             _settings = options?.Value ?? throw new ArgumentNullException($"{GetType().Name}.Ctr - Argument {nameof(options)} cannot be null.");
-            if (serviceProvider == null) throw new ArgumentNullException($"{GetType().Name}.Ctr - Argument {nameof(serviceProvider)} cannot be null.");
+            _httpContextAccessor = httpContextAccessor;
 
-            if (!IsCacheEnabled() || cacheControlOptions.DisableCacheFromHeader)
+            if (!IsCacheEnabled())
             {
                 _cacheHandlers = new List<CacheHandlerWithOptions>(0);
                 return;
@@ -49,8 +51,9 @@ namespace Digipolis.Caching.Services
             }
 
             _cacheHandlers = cacheHandlers;
+            
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _cacheControlOptions = cacheControlOptions;
+            
         }
 
         public async Task<T> GetFromCacheOrFuncAsync<T>(
@@ -95,7 +98,7 @@ namespace Digipolis.Caching.Services
         public async Task<(bool succeeded, T value)> GetFromCacheAsync<T>(string key, int? minutesToCacheLocally = null)
         {
             CacheObject<T> result = default;
-            if (!IsCacheEnabled() || _cacheControlOptions.DisableCacheFromHeader || _cacheHandlers == null || _cacheHandlers.Count < 1) return (succeeded: false, value: result.Value);
+            if (!IsCacheEnabled() || _cacheHandlers == null || _cacheHandlers.Count < 1 || IsCacheScopeDisabled()) return (succeeded: false, value: default);
 
             var itemFoundInCacheTierNumber = -1;
 
@@ -165,7 +168,7 @@ namespace Digipolis.Caching.Services
         /// <returns></returns>
         public async Task SaveToCacheAsync<T>(string key, T value, int? minutesToCacheLocally = null, int? minutesToCacheDistributed = null)
         {
-            if (!IsCacheEnabled() || _cacheHandlers == null || _cacheHandlers.Count < 1) return;
+            if (!IsCacheEnabled() || _cacheHandlers == null || _cacheHandlers.Count < 1 || IsCacheScopeDisabled()) return;
 
             foreach (var cacheHandlerWrapper in _cacheHandlers)
             {
@@ -200,7 +203,7 @@ namespace Digipolis.Caching.Services
         /// <returns></returns>
         public async Task RemoveFromCacheAsync(params string[] keys)
         {
-            if (!IsCacheEnabled() || _cacheHandlers == null || _cacheHandlers.Count < 1) return;
+            if (!IsCacheEnabled() || _cacheHandlers == null || _cacheHandlers.Count < 1 || IsCacheScopeDisabled()) return;
 
             //reverse: remove longest living cache first to prevent race conditions (possibly refreshing shorter living cache entries while delete is in progress)
             var reversed = _cacheHandlers.Reverse();
@@ -250,9 +253,16 @@ namespace Digipolis.Caching.Services
 
         private bool IsCacheEnabled()
         {
-            if (_settings?.CacheEnabled ?? false)
+            if (_settings != null && _settings.CacheEnabled)
                 return true;
             return false;
+        }
+
+        private bool IsCacheScopeDisabled()
+        {
+	        _cacheControlOptions = _httpContextAccessor?.HttpContext?.RequestServices?.GetRequiredService<CacheControlOptions>();
+
+	        return _cacheControlOptions != null && _cacheControlOptions.DisableCacheFromHeader;
         }
 
         private bool IsTier2Enabled()
