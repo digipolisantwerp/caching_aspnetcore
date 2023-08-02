@@ -73,6 +73,16 @@ You can determine the cache setting using your app settings. See table below for
 | DefaultMinutesToCacheTier2 | Determines the default storage keeping time in minutes of the distributed (Redis) cache |         |
 | TimeoutAsyncAfterSeconds   | Determines the default timeout time in seconds for retrieving data from the distributed store. | 5       |
 
+## Disable caching with headers for testing purposes
+
+This library supports disabling the cache through sending a specific header in the request.
+To enable this feature the following configuration is required in the Configure method of the Startup.cs of your application:
+```csharp  
+app.UseDisableCacheRequestHeaderMiddleWare();
+```
+
+Now you can send a "x-cache-disable" header with value 'true' in your request to disable the caching mechanism. This header is scoped to one single request.
+
 ## Contributing
 
 Pull requests are always welcome, however keep the following things in mind:

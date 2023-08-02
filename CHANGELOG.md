@@ -1,5 +1,8 @@
 # Caching
 
+## 5.0.1
+- Feature: added ability to disable cache through requestheaders
+
 ## 5.0.0
 - Update for .net 5 applications
 
