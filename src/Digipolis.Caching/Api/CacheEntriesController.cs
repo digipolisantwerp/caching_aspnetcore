@@ -1,10 +1,10 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Digipolis.Caching.Models;
+﻿using Digipolis.Caching.Models;
 using Digipolis.Caching.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Digipolis.Caching.Api
 {
