@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <Version>5.0.1</Version>
+    <Version>5.1.0</Version>
     <Description>Deze package biedt caching functionaliteit aan in een .NET Core project</Description>
   </PropertyGroup>
 
