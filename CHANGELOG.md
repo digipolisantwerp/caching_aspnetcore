@@ -1,5 +1,8 @@
 # Caching
 
+## 5.1.0
+- Upgrade Microsoft.Extensions.Caching.* packages
+
 ## 5.0.1
 - Feature: added ability to disable cache through requestheaders
 
