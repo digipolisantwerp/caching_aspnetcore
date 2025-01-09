@@ -21,16 +21,16 @@ namespace Digipolis.Caching.Services
         private readonly CacheSettings _settings;
         private readonly IReadOnlyCollection<CacheHandlerWithOptions> _cacheHandlers;
         private readonly ILogger<CacheService> _logger;
-        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IServiceProvider _serviceProvider;
         private CacheControlOptions _cacheControlOptions;
 
         public CacheService(
             IServiceProvider serviceProvider,
             IOptions<CacheSettings> options,
-            ILogger<CacheService> logger, IHttpContextAccessor httpContextAccessor)
+            ILogger<CacheService> logger)
         {
             _settings = options?.Value ?? throw new ArgumentNullException($"{GetType().Name}.Ctr - Argument {nameof(options)} cannot be null.");
-            _httpContextAccessor = httpContextAccessor;
+            
 
             if (!IsCacheEnabled())
             {
@@ -51,9 +51,8 @@ namespace Digipolis.Caching.Services
             }
 
             _cacheHandlers = cacheHandlers;
-            
+            _serviceProvider = serviceProvider;
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            
         }
 
         public async Task<T> GetFromCacheOrFuncAsync<T>(
@@ -260,8 +259,7 @@ namespace Digipolis.Caching.Services
 
         private bool IsCacheScopeDisabled()
         {
-	        _cacheControlOptions = _httpContextAccessor?.HttpContext?.RequestServices?.GetRequiredService<CacheControlOptions>();
-
+	        _cacheControlOptions =_serviceProvider.GetRequiredService<CacheControlOptions>();
 	        return _cacheControlOptions != null && _cacheControlOptions.DisableCacheFromHeader;
         }
 
